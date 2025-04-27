@@ -1,0 +1,255 @@
+---
+title: "Breastfeeding Trends and Economic Factors: A Global Perspective"
+author:
+  - Sahil Rana DCU Id - 43503
+format:
+  html:
+    theme: united
+    css: styles.css
+    toc: true
+    toc-title: "Contents"
+    toc-depth: 2
+    page-layout: full
+    embed-resources: true
+    code-tools: true
+execute:
+  warning: false
+  message: false
+---
+
+# About This Report
+
+This report explores global patterns in early **breastfeeding practices** and their relationship with access to **improved sanitation facilities**, highlighting how cultural, social, and infrastructural factors shape child health outcomes.
+
+# Introduction
+
+Breastfeeding within the first days of life plays a **critical role** in a child's survival, nutrition, and development.  
+At the same time, access to **safe sanitation** can indirectly influence health outcomes for mothers and infants.  
+Through a combination of **maps**, **bar charts**, **trend lines**, and a **scatterplot**, this report provides a multi-faceted look into how these two essential indicators behave globally.
+
+# Breastfeeding Rates Across the World (2000–2022)
+
+![](visualizations/worldmapoutput.png){fig-align="center" width="85%"}
+
+**Insight:**  
+- **Sub-Saharan Africa** and **South Asia** *clearly lead* with *very high early breastfeeding rates* (80–100%), shown by the darkest red shades.  
+- **Latin America**, **North Africa**, and parts of **Southeast Asia** generally show *moderate to high* breastfeeding rates (40–80%), though *some countries lag behind*.  
+- **Western Europe**, **North America**, and parts of the **Middle East** show *lower breastfeeding rates* (0–40%) or **missing data**.  
+- The distribution reflects how **cultural traditions**, **public health initiatives**, and **data availability** vary significantly across regions.  
+- **Countries with missing or very low data** (gray areas) highlight *critical gaps* in both *monitoring systems* and *support structures* for maternal and child health.
+
+### Code
+:::: {.panel-tabset}
+### Show Code
+```{.python .code-fold}
+world = gpd.read_file('../data/shapefiles/ne_110m_admin_0_countries/ne_110m_admin_0_countries.shp')
+
+merged = world.merge(breastfeeding_latest, how="left", left_on="NAME", right_on="country_standardized")
+
+missing = merged[merged['obs_value'].isna()]
+print("Missing countries after merge:", missing['NAME'].tolist())
+
+bins = [0, 20, 40, 60, 80, 100]
+labels = ['Very Low (0–20%)', 'Low (20–40%)', 'Moderate (40–60%)', 'High (60–80%)', 'Very High (80–100%)']
+
+merged['breastfeeding_bin'] = pd.cut(merged['obs_value'], bins=bins, labels=labels)
+
+colors = ['#fee5d9', '#fcae91', '#fb6a4a', '#de2d26', '#a50f15']  # color palette
+cmap = mcolors.ListedColormap(colors)
+
+bin_to_color = dict(zip(labels, range(len(labels))))
+merged['bin_idx'] = merged['breastfeeding_bin'].map(bin_to_color)
+
+fig, ax = plt.subplots(1, 1, figsize=(20, 10))
+
+fig.patch.set_facecolor('#f0f7ff') 
+ax.set_facecolor('#f0f7ff')
+
+merged.plot(
+    column='bin_idx',
+    cmap=cmap,
+    linewidth=0.8,
+    edgecolor='black',
+    ax=ax,
+    legend=False,
+    missing_kwds={"color": "lightgrey", "label": "Missing Data"}
+)
+
+legend_elements = [Line2D([0], [0], marker='o', color='w', label=label,
+                          markerfacecolor=color, markersize=10) for label, color in zip(labels, colors)]
+ax.legend(handles=legend_elements, title="Breastfeeding Rates", loc='lower left', fontsize=12, title_fontsize=14)
+
+ax.set_title('Global Breastfeeding Rates Map (2000–2022)', fontdict={'fontsize': 24, 'fontweight': 'bold'}, pad=20)
+ax.axis('off')
+
+plt.tight_layout()
+plt.show()
+```
+::::
+
+## Breastfeeding Trends Over Time (2000–2022)
+
+![](visualizations/linechartoutput.png){fig-align="center" width="85%"}
+
+**Insight:**  
+- Across all countries analyzed, there is a **_clear upward trend_** in breastfeeding rates from _2000 to 2022_.  
+- **Malawi** consistently leads with the _highest breastfeeding rates_, crossing **95%** in recent years.  
+- **Ethiopia** and **Liberia** show _notable improvements_ but with greater fluctuations, suggesting periods of _program success followed by setbacks_.  
+- **Rwanda** and **Zimbabwe** maintain _stable, high rates_ but exhibit _minor dips_ around 2015, hinting at possible _policy or social challenges_ during that period.  
+- Overall, the trends reinforce the idea that **sustained public health efforts** are essential to maintaining and improving breastfeeding rates globally.
+
+### Code 
+:::: {.panel-tabset}
+### Show Code
+```{.python .code-fold}
+# Line Chart
+selected_countries = ['Malawi', 'Rwanda', 'Ethiopia','Zimbabwe', 'Liberia']
+
+# Filter data
+trend_data = breastfeeding_data[
+    breastfeeding_data['country'].isin(selected_countries)
+]
+
+# Plot
+plt.figure(figsize=(14, 8))
+sns.lineplot(
+    data=trend_data,
+    x='time_period',
+    y='obs_value',
+    hue='country',
+    marker='o',
+    linewidth=2       
+)
+
+# Title and labels
+plt.title('Breastfeeding Trends Over Time (2000–2022)', fontsize=20, weight='bold', pad=20)
+plt.xlabel('Year', fontsize=14, labelpad=10)
+plt.ylabel('Breastfeeding Rate (%)', fontsize=14, labelpad=10)
+
+# Tidy x-ticks
+plt.xticks(sorted(trend_data['time_period'].unique()), rotation=45)
+
+# Nice grid
+plt.grid(True, linestyle='--', alpha=0.6)
+
+# Legend
+plt.legend(title='Country', fontsize=12, title_fontsize=14)
+
+plt.tight_layout()
+plt.show()
+```
+::::
+---
+
+## Breastfeeding Rates vs Sanitation Access (Scatterplot with Regression Line)
+
+![](visualizations/scatterregoutput.png){fig-align="center" width="80%"}
+
+**Insight:**  
+- The **scatterplot with regression line** indicates a **_slight negative correlation_** between _sanitation access_ and _breastfeeding rates_.  
+- Surprisingly, countries with _higher sanitation access_ are **not necessarily the ones with the highest breastfeeding rates**.  
+- This suggests that **cultural practices, awareness programs, and healthcare support** have a stronger impact on breastfeeding habits than sanitation infrastructure alone.  
+- **Policy efforts** aimed at improving breastfeeding must focus on **social, cultural, and educational initiatives**, not just on general infrastructure improvements.
+
+### Code
+:::: {.panel-tabset}
+### Show Code
+```{.python .code-fold}
+merged_data = pd.merge(
+    breastfeeding_latest[['country_standardized', 'obs_value']],
+    indi2[['country', 'obs_value']],
+    how='inner',
+    left_on='country_standardized',
+    right_on='country'
+)
+
+merged_data = merged_data.rename(columns={
+    'obs_value_x': 'Breastfeeding Rate (%)',
+    'obs_value_y': 'Sanitation Access (%)'
+})
+
+merged_data = merged_data.dropna()
+
+plt.figure(figsize=(10, 6))
+
+sns.regplot(
+    data=merged_data,
+    x='Sanitation Access (%)',
+    y='Breastfeeding Rate (%)',
+    scatter_kws={'s': 60, 'alpha': 0.7},
+    line_kws={'color': 'red', 'linewidth': 2}
+)
+
+plt.title('Breastfeeding Rates vs Sanitation Access (Scatterplot with Regression Line)', fontsize=18, weight='bold', pad=20)
+plt.xlabel('Sanitation Access (%)', fontsize=14)
+plt.ylabel('Breastfeeding Rate (%)', fontsize=14)
+
+plt.grid(True, linestyle='--', alpha=0.5)
+plt.tight_layout()
+plt.show()
+```
+::::
+
+---
+
+## Top 20 Countries by Breastfeeding Rates (2000–2022)
+
+![](visualizations/bargraphoutput.png){fig-align="center" width="80%"}
+
+**Insight:**  
+- **Malawi** ranks at the top with a **_breastfeeding rate of 97.4%_**, followed closely by **Turkmenistan** and **Rwanda**.  
+- Many of the top performers are **_low-to-middle income countries_**, demonstrating that _high breastfeeding rates_ are achievable regardless of _economic status_.  
+- **Cultural factors, community healthcare interventions, and local traditions** seem to have played a **major role** in sustaining _exclusive breastfeeding practices_.  
+- These top countries serve as **positive case studies** for nations aiming to improve their breastfeeding rates through **community-based strategies** rather than just healthcare expenditure.
+
+### Code 
+:::: {.panel-tabset}
+### Show Code
+```{.python .code-fold}
+top_countries = breastfeeding_latest.sort_values(by='obs_value', ascending=False).head(20)
+
+plt.figure(figsize=(12, 8))
+bars = plt.barh(
+    top_countries['country_standardized'],
+    top_countries['obs_value'],
+    color=plt.cm.viridis_r(np.linspace(0, 1, len(top_countries)))
+)
+
+for bar in bars:
+    width = bar.get_width()
+    plt.text(
+        width + 0.5, 
+        bar.get_y() + bar.get_height()/2,
+        f'{width:.1f}%',
+        va='center',
+        ha='left',
+        fontsize=10
+    )
+
+plt.title('Top 20 Countries by Breastfeeding Rates (2000–2022)', fontsize=20, weight='bold', pad=20)
+plt.xlabel('Breastfeeding Rate (%)', fontsize=14, labelpad=15)
+plt.ylabel('Country', fontsize=14, labelpad=15)
+
+plt.xlim(80, 100)
+plt.xticks(np.arange(80, 101, 5))
+
+plt.grid(axis='x', linestyle='--', alpha=0.7)
+
+plt.gca().invert_yaxis()
+
+plt.tight_layout()
+plt.show()
+```
+::::
+---
+
+# Conclusion
+
+The analysis of global breastfeeding patterns between 2000 and 2022 reveals several key insights.  
+Firstly, **breastfeeding rates have generally improved worldwide**, with some countries achieving **exceptionally high coverage** through _community-based healthcare_ and _strong public health campaigns_.  
+Secondly, **sanitation access alone does not predict breastfeeding success** — emphasizing the importance of **education, cultural values, and healthcare interventions** in shaping maternal behaviors.  
+Lastly, **socioeconomic status** is not a sole determinant; several _low-to-middle income countries_ outperformed wealthier nations, highlighting that **targeted policies, community engagement, and sustained awareness programs** can drive meaningful change.
+
+To ensure continued progress, governments, NGOs, and global health agencies must prioritize **culturally sensitive, education-driven initiatives** while supporting infrastructure development.  
+In doing so, we can work towards a future where **every child benefits from the life-saving advantages of early and sustained breastfeeding**, regardless of their place of birth.
+
